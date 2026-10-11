@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "profiles": {
+    "print-standard": {
+      "fontFamily": "MiSans", "lineWidthPt": 0.6,
+      "roles": {
+        "section": {"fontPt": 12, "leadingRatio": 1.2, "bold": true, "paddingMm": [1, 0.5]},
+        "task": {"fontPt": 12, "leadingRatio": 1.2, "bold": true, "paddingMm": [1.5, 1]},
+        "body": {"fontPt": 12, "leadingRatio": 1.25, "bold": false, "paddingMm": [1.5, 1]},
+        "note": {"fontPt": 10.5, "leadingRatio": 1.25, "bold": false, "paddingMm": [1, 0.5]}
+      },
+      "spacingMm": {"grid": 0.5, "connectorLane": 3, "moduleGap": 4}
+    },
+    "print-dense": {
+      "fontFamily": "MiSans", "lineWidthPt": 0.6,
+      "roles": {
+        "section": {"fontPt": 11.5, "leadingRatio": 1.2, "bold": true, "paddingMm": [1, 0.5]},
+        "task": {"fontPt": 10.5, "leadingRatio": 1.2, "bold": true, "paddingMm": [1.5, 1]},
+        "body": {"fontPt": 10, "leadingRatio": 1.25, "bold": false, "paddingMm": [1.5, 1]},
+        "note": {"fontPt": 9.5, "leadingRatio": 1.25, "bold": false, "paddingMm": [1, 0.5]}
+      },
+      "spacingMm": {"grid": 0.5, "connectorLane": 3, "moduleGap": 3}
+    },
+    "presentation": {
+      "fontFamily": "MiSans", "lineWidthPt": 1,
+      "roles": {
+        "section": {"fontPt": 24, "leadingRatio": 1.2, "bold": true, "paddingMm": [2, 1]},
+        "task": {"fontPt": 20, "leadingRatio": 1.2, "bold": true, "paddingMm": [2, 1.5]},
+        "body": {"fontPt": 18, "leadingRatio": 1.25, "bold": false, "paddingMm": [2, 1.5]},
+        "note": {"fontPt": 16, "leadingRatio": 1.25, "bold": false, "paddingMm": [2, 1]}
+      },
+      "spacingMm": {"grid": 1, "connectorLane": 5, "moduleGap": 6}
+    }
+  }
+}

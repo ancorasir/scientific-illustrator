@@ -1,5 +1,7 @@
 # Scientific Illustrator
 
+> **AncoraSIR维护分支**：通用科研图式排版与可编辑性工作流见[维护分支说明](plugins/scientific-illustrator/docs/maintained-fork/README.md)、[排版准则](plugins/scientific-illustrator/docs/maintained-fork/layout-guide.md)和[升级路线](plugins/scientific-illustrator/docs/maintained-fork/roadmap.md)。首轮已增加最终尺寸样式解析与OOXML行距/段距参数；尚未发布独立插件版本。下方安装命令仍指向上游稳定版，不会自动安装本分支扩展。
+
 把参考图上传给 Codex，插件会在 **Microsoft PowerPoint、WPS 演示或 draw.io** 中尽量用可编辑对象重新绘制，并自动检查和修正。
 
 **作者：一个地质博士**

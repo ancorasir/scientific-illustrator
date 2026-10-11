@@ -8,6 +8,7 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { getOfficeJsBridge } from "./officejs-bridge.mjs";
+import { resolveFigureStyle, assertParagraphSupport, PROFILE_NAMES } from "./figure-style.mjs";
 
 const execFileAsync = promisify(execFile);
 const SERVER_NAME = "powerpoint-live";
@@ -50,6 +51,9 @@ const textStyleProperties = {
   italic: { type: "boolean" },
   alignment: { type: "string", enum: ["left", "center", "right", "justify"] },
   vertical_alignment: { type: "string", enum: ["top", "middle", "bottom"] },
+  line_spacing_pt: { type: "number", minimum: 1, maximum: 1200, description: "Exact line spacing in source points. OOXML working-copy backend only; other backends reject before mutation." },
+  paragraph_space_before_pt: { type: "number", minimum: 0, maximum: 1200, description: "Paragraph space before in source points. OOXML only." },
+  paragraph_space_after_pt: { type: "number", minimum: 0, maximum: 1200, description: "Paragraph space after in source points. OOXML only." },
 };
 
 const textFrameProperties = {
@@ -80,6 +84,28 @@ const shapeTargetProperties = {
 };
 
 const tools = [
+  {
+    name: "powerpoint_resolve_figure_style",
+    description: "Read-only: resolve optional print/presentation typography and line-width presets at final crop size, compensate for insertion scaling and check explicit body/caption height budgets. Returns text_style and line_style for native drawing calls; does not change the deck or certify visual fit.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        profile: { type: "string", enum: PROFILE_NAMES, default: "print-standard" },
+        role: { type: "string", enum: ["section", "task", "body", "note"], default: "body" },
+        final_width_mm: { type: "number", minimum: 1, maximum: 10000 },
+        source_figure_width_mm: { type: "number", minimum: 1, maximum: 10000, description: "Actual cropped drawing width, not slide width. Defaults to final_width_mm." },
+        final_height_mm: { type: "number", minimum: 1, maximum: 10000 },
+        body_width_mm: { type: "number", minimum: 1, maximum: 10000 },
+        body_height_mm: { type: "number", minimum: 1, maximum: 10000 },
+        caption_height_mm: { type: "number", minimum: 0, maximum: 10000 },
+        paragraph_gap_mm: { type: "number", minimum: 0, maximum: 10000 },
+        font_family: { type: "string" },
+        font_size_pt: { type: "number", minimum: 1, maximum: 400 },
+        leading_ratio: { type: "number", minimum: 1, maximum: 3 },
+      },
+      required: ["final_width_mm"], additionalProperties: false,
+    },
+  },
   {
     name: "powerpoint_status",
     description: "Check Microsoft PowerPoint or WPS Presentation availability and the current managed presentation. Windows PowerPoint prefers COM; Mac PowerPoint prefers a connected Office.js task pane with per-object context.sync; WPS and unconnected Mac PowerPoint use the editable OOXML fallback. This is read-only.",
@@ -947,6 +973,7 @@ async function runBridge(action, args = {}, forcedBackend = null) {
     throw new Error(`Sequence backend ${forcedBackend} cannot satisfy the requested ${resolvedBackend} route. Start a new task with one target application and backend.`);
   }
   const backend = forcedBackend || resolvedBackend;
+  assertParagraphSupport(backend, effectiveArgs);
   if (requested === "wps" && backend !== "ooxml") throw new Error(`Backend ${backend} cannot control WPS Presentation.`);
 
   // An OOXML mutation requested with host=auto still needs a concrete target
@@ -1027,6 +1054,7 @@ async function runSequence(args) {
   const checkpointSize = args.checkpoint_size || 10;
   const sequenceHost = requestedHost(args);
   const sequenceBackend = await resolveBackend("status", args);
+  assertParagraphSupport(sequenceBackend, args.operations);
   const results = [];
   const fileRefreshes = [];
   let pendingFileRefresh = false;
@@ -1107,6 +1135,7 @@ async function runSequence(args) {
 }
 
 async function handleTool(name, args = {}) {
+  if (name === "powerpoint_resolve_figure_style") return { value: resolveFigureStyle(args) };
   if (name === "powerpoint_draw_sequence") return { value: await runSequence(args) };
   if (name === "powerpoint_officejs_status") {
     const value = await officeJsStatus(Number(args.wait_for_connection_ms || 0));
