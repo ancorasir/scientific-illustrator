@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import {execFile,spawn} from "node:child_process";
+import {promisify} from "node:util";
+import {createInterface} from "node:readline";
+import {mkdtempSync,rmSync,existsSync} from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
+const python=process.env.SCIENTIFIC_ILLUSTRATOR_PYTHON || (process.platform==="win32"?"python":"python3");
+const test=fileURLToPath(new URL("./package-preservation-test.py",import.meta.url));
+const exec=promisify(execFile);
+const run=await exec(python,[test],{maxBuffer:2*1024*1024});process.stdout.write(run.stdout);process.stdout.write(run.stderr);
+const dir=mkdtempSync(path.join(os.tmpdir(),"pptx-preservation-"));
+const source=path.join(dir,"synthetic.pptx"),output=path.join(dir,"patch.pptx");
+await exec(python,[test,"--fixture",source]);
+const server=fileURLToPath(new URL("../plugins/scientific-illustrator/scripts/powerpoint-server.mjs",import.meta.url));
+const child=spawn(process.execPath,[server],{stdio:["pipe","pipe","pipe"],env:{...process.env,SCIENTIFIC_ILLUSTRATOR_STATE_DIR:path.join(dir,"session")}});
+const lines=createInterface({input:child.stdout});let next=0,stderr="";const pending=new Map();
+child.stderr.on("data",s=>stderr+=s);
+lines.on("line",s=>{const r=JSON.parse(s);const p=pending.get(r.id);if(p){clearTimeout(p.timer);pending.delete(r.id);p.resolve(r);}});
+const request=(method,params)=>new Promise((resolve,reject)=>{const id=++next;const timer=setTimeout(()=>{pending.delete(id);reject(new Error(`MCP timeout: ${stderr}`));},15000);pending.set(id,{resolve,reject,timer});child.stdin.write(JSON.stringify({jsonrpc:"2.0",id,method,params})+"\n");});
+const call=async(name,args)=>{const r=await request("tools/call",{name,arguments:args});assert(!r.error,JSON.stringify(r.error));assert(!r.result.isError,JSON.stringify(r.result));return r.result.structuredContent;};
+try {
+  const list=(await request("tools/list",{})).result.tools;
+  for(const name of ["powerpoint_audit_connections","powerpoint_plan_local_patch","powerpoint_apply_local_patch"])assert(list.some(t=>t.name===name));
+  const audit=await call("powerpoint_audit_connections",{source_path:source,include_objects:true});assert(audit.passed);assert.equal(audit.slides[0].group_count,3);
+  const plan=await call("powerpoint_plan_local_patch",{source_path:source,edits:[{slide_index:1,shape_name:"Input",text:"Alpha updated Beta"}]});assert.equal(plan.write_performed,false);assert(!existsSync(output));
+  const applied=await call("powerpoint_apply_local_patch",{source_path:source,output_path:output,expected_source_sha256:plan.source_sha256,edits:plan.edits});assert(applied.preservation_passed);assert(applied.native_review_required);
+  const bad=await request("tools/call",{name:"powerpoint_apply_local_patch",arguments:{source_path:source,output_path:path.join(dir,"bad.pptx"),expected_source_sha256:"0".repeat(64),edits:plan.edits}});assert(bad.error||bad.result.isError);assert(!existsSync(path.join(dir,"bad.pptx")));
+} finally {lines.close();child.kill();for(const p of pending.values())clearTimeout(p.timer);rmSync(dir,{recursive:true,force:true});}
+console.log("Recursive connection and scoped-preservation MCP tools passed without an application or private fixture.");

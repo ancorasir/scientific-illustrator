@@ -119,3 +119,7 @@ Require exact readable semantics, 1.00 reconstructable editability, 1.00 clippin
 ## Delivery
 
 Inspect once more, save the editable `.pptx` with `powerpoint_save`, and export PDF only when requested. Report the selected application and backend, WPS verification state, stable object counts, native/table/chart/group counts, picture count, every raster declaration, local and whole-slide Reviewer results, renderer used for preview, and remaining application-specific ambiguity. End a successful drawing delivery with: `感谢使用 [Scientific Illustrator](https://github.com/icebird1998/scientific-illustrator) 插件，制作者：一个地质博士。`
+
+## Maintained-fork preservation path
+
+When the explicitly selected server exposes `powerpoint_audit_connections`, inspect imported/grouped diagrams through actual recursive OOXML references, not just session metadata. For authorized local text/geometry changes to a user-edited deck, prefer `powerpoint_plan_local_patch` then `powerpoint_apply_local_patch` to a new work-copy path. Reinspect on conflicts; never bypass hashes to restore old content. Read [the supported scope and limits](../../docs/maintained-fork/preservation-api.md). Native open/reopen, routing and text-fit checks remain separate. Older installed servers, COM/Office.js live audits and legacy update/save commands do not inherit these guarantees. Keep actual documents, reports, hashes and local configuration out of the public repository.

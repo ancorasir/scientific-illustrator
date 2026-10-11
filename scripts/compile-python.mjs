@@ -30,7 +30,7 @@ const candidates = [
 const failures = [];
 for (const candidate of candidates) {
   try {
-    await execFileAsync(candidate.executable, [...candidate.args, "-m", "py_compile", bridge], {
+    await execFileAsync(candidate.executable, [...candidate.args, "-m", "py_compile", bridge, path.join(path.dirname(bridge), "pptx-package.py")], {
       cwd: root,
       maxBuffer: 1024 * 1024,
     });

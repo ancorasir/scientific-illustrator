@@ -1,5 +1,11 @@
 # Changelog
 
+## Maintained fork: grouped audits and scoped preservation
+
+- Add file-only recursive native connector audits across nested groups, with explicit geometry/site coverage.
+- Add read-only local edit plans and source/object conflict checks; write only selected slide parts and verify untouched objects/package payloads.
+- Add synthetic regression and MCP endpoint tests. Native behavior, automatic routing, font fit and live-backend parity remain separate.
+
 ## 1.5.4 — 2026-08-08
 
 - Updated the author, developer, Office add-in provider, task-pane, license, README, and successful-delivery attribution to `一个地质博士`.

@@ -9,6 +9,8 @@ This fork builds on [Scientific Illustrator](https://github.com/icebird1998/scie
 - Source-to-output scale compensation uses cropped figure width, not slide width. The height budget requires explicit figure, body, caption and paragraph-gap dimensions; missing data is reported as unchecked.
 - `line_spacing_pt`, `paragraph_space_before_pt`, `paragraph_space_after_pt` are implemented in the OOXML working-copy backend. Explicit font assignment also sets Latin, East Asian and complex-script run fields.
 - Other backends reject explicit paragraph settings **before dispatch**. This includes settings nested in sequence/table operations; unsupported parameters must not appear to succeed.
+- Recursive file-only `powerpoint_audit_connections` checks imported/nested and cross-group native references without relying on session metadata.
+- Read-only `powerpoint_plan_local_patch` and version-checked `powerpoint_apply_local_patch` verify selected-field scope, unselected object XML and untouched package payloads. See the [preservation API](preservation-api.md) for supported edits and limits. Legacy editing tools do not inherit this guarantee.
 - Synthetic tests cover style scaling, invalid inputs, budget overflow, backend guards, the public MCP endpoint, saved OOXML typography and preservation of an unselected object.
 
 These changes do not supply a constraint solver, automatic text measurement, collision-free routing or native application verification. The existing installed upstream plugin is not changed by cloning this fork.
@@ -42,7 +44,7 @@ This returns a 10 pt body font with 12.5 pt exact leading, fixed padding and no 
 
 ## Development and verification
 
-Run `node --run test:figure-style` for the new regression suite and `node --run test` for the full existing suite. Python requires `python-pptx`; set `SCIENTIFIC_ILLUSTRATOR_PYTHON` if the Python executable is not on PATH. The typography test saves/reopens a synthetic deck in python-pptx; it does **not** open desktop PowerPoint.
+Run `node --run test:package-preservation` for recursive references and scoped patches, `node --run test:figure-style` for the new regression suite and `node --run test` for the full existing suite. Python requires `python-pptx`; set `SCIENTIFIC_ILLUSTRATOR_PYTHON` if the Python executable is not on PATH. The typography test saves/reopens a synthetic deck in python-pptx; it does **not** open desktop PowerPoint.
 
 The [upgrade roadmap](roadmap.md) separates shipped functionality from planned work. Keep source changes on reviewed topic branches, track upstream independently and retain rollback points. The fork-specific extension is not published under a separate installed-plugin identity yet; do not replace a plugin cache or claim the desktop MCP tools have switched automatically. Explicit local-source runs can use this fork's server now. A separately named distribution and migration check belong to the release phase.
 

@@ -2,8 +2,8 @@
 import { execFileSync } from "node:child_process";
 const git = args => execFileSync("git",args,{encoding:"utf8",maxBuffer:20*1024*1024});
 const files = git(["diff","--cached","--name-only","-z"]).split("\0").filter(Boolean);
-const allowed = /^(README\.md|CHANGELOG\.md|package\.json|scripts\/(figure-style-test\.mjs|figure-typography-test\.py|check-public-diff\.mjs)|plugins\/scientific-illustrator\/(docs\/maintained-fork\/[^/]+\.md|styles\/figure-profiles\.json|scripts\/(figure-style\.mjs|powerpoint-server\.mjs|powerpoint-mac-bridge\.py)|skills\/(edit-powerpoint-live|design-scientific-figure)\/SKILL\.md))$/;
-const findings = files.filter(f=>!allowed.test(f)).map(f=>`${f}: outside the first-increment publish allowlist`);
+const allowed = /^(README\.md|CHANGELOG\.md|package\.json|scripts\/(figure-style-test\.mjs|figure-typography-test\.py|package-preservation-test\.py|package-preservation-test\.mjs|compile-python\.mjs|check-public-diff\.mjs)|plugins\/scientific-illustrator\/(docs\/maintained-fork\/[^/]+\.md|styles\/figure-profiles\.json|scripts\/(figure-style\.mjs|pptx-package\.py|powerpoint-server\.mjs|powerpoint-mac-bridge\.py)|skills\/(edit-powerpoint-live|design-scientific-figure)\/SKILL\.md))$/;
+const findings = files.filter(f=>!allowed.test(f)).map(f=>`${f}: outside the maintained-fork publish allowlist`);
 const patch = git(["diff","--cached","--no-ext-diff","--unified=0","--no-color"]);
 // Construct patterns in pieces so this guard's own source is not a false positive.
 const patterns = [
