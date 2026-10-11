@@ -780,6 +780,13 @@ def _get_arrow(shape, tag: str) -> str:
 
 
 def _apply_text_frame(text_frame, args: dict) -> None:
+    paragraph_fields = ("line_spacing_pt", "paragraph_space_before_pt", "paragraph_space_after_pt")
+    for field in paragraph_fields:
+        if args.get(field) is not None:
+            value = float(args[field])
+            minimum = 1 if field == "line_spacing_pt" else 0
+            if not math.isfinite(value) or not minimum <= value <= 1200:
+                raise ValueError(f"{field} must be finite and between {minimum} and 1200 points")
     if args.get("margin_left") is not None:
         text_frame.margin_left = _pt(args["margin_left"])
     if args.get("margin_right") is not None:
@@ -803,6 +810,12 @@ def _apply_text_frame(text_frame, args: dict) -> None:
     alignment = {"left": PP_ALIGN.LEFT, "center": PP_ALIGN.CENTER, "right": PP_ALIGN.RIGHT, "justify": PP_ALIGN.JUSTIFY}
     font_color = _rgb(args.get("font_color"))
     for paragraph in text_frame.paragraphs:
+        if args.get("line_spacing_pt") is not None:
+            paragraph.line_spacing = _pt(args["line_spacing_pt"])
+        if args.get("paragraph_space_before_pt") is not None:
+            paragraph.space_before = _pt(args["paragraph_space_before_pt"])
+        if args.get("paragraph_space_after_pt") is not None:
+            paragraph.space_after = _pt(args["paragraph_space_after_pt"])
         if args.get("alignment") in alignment:
             paragraph.alignment = alignment[args["alignment"]]
         if not paragraph.runs:
@@ -811,6 +824,16 @@ def _apply_text_frame(text_frame, args: dict) -> None:
             font = run.font
             if args.get("font_name") is not None:
                 font.name = str(args["font_name"])
+                # Explicitly cover CJK and complex-script text without changing
+                # an existing deck's theme/master or unselected objects.
+                rpr = run._r.get_or_add_rPr()
+                for tag, successors in (("a:ea", ("a:cs", "a:sym", "a:hlinkClick", "a:hlinkMouseOver", "a:rtl", "a:extLst")),
+                                        ("a:cs", ("a:sym", "a:hlinkClick", "a:hlinkMouseOver", "a:rtl", "a:extLst"))):
+                    element = rpr.find(tag, rpr.nsmap)
+                    if element is None:
+                        element = OxmlElement(tag)
+                        rpr.insert_element_before(element, *successors)
+                    element.set("typeface", str(args["font_name"]))
             if args.get("font_size") is not None:
                 font.size = _pt(args["font_size"])
             if args.get("bold") is not None:

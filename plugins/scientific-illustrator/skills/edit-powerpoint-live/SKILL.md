@@ -88,6 +88,8 @@ In Office.js mode, pre-crop every atomic picture before calling `powerpoint_add_
 
 ## Draw one region at a time
 
+For document or presentation diagrams, read the maintained fork's [layout guide](../../docs/maintained-fork/layout-guide.md) and [usage contract](../../docs/maintained-fork/README.md) when these files are present. Call `powerpoint_resolve_figure_style` with the actual final crop width and an explicit text role. Apply its `text_style` and `line_style` to authorized native objects only. Do not use slide width for insertion scaling or silently apply a preset to existing objects. Exact paragraph spacing currently requires the OOXML working-copy backend; COM/Office.js must reject those settings rather than ignore them. Reserve caption and paragraph space explicitly, keep no-overflow separate from visual quality, and retain native editing tests.
+
 1. Establish slide size, margins, panel bounds, alignment anchors, spacing tokens, z-order, and connector lanes.
 2. Draw one logical region from background to foreground with stable names and nonzero pacing. For Office.js, use `per_object` when visible object-level commits are wanted. For OOXML PowerPoint/WPS, use the default `checkpoint` mode so every object is saved but the application is refreshed only at checkpoint boundaries; use `per_object` only when explicitly requested and warn that it is slower. Use `fast` for one final refresh.
 3. Use fixed text geometry, explicit margins, wrapping, alignment, and controlled autofit.

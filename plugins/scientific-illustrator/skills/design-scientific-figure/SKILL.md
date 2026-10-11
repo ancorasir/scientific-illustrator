@@ -7,6 +7,8 @@ description: Design a new scientific illustration, graphical abstract, workflow,
 
 Act as the Designer in the four-role Scientific Illustrator protocol. Produce a backend-neutral design specification before the Drawer adds any object. The selected backend affects object mapping, not the design quality or acceptance gate.
 
+For document and presentation diagrams, also read the maintained fork’s [layout guide](../../docs/maintained-fork/layout-guide.md) when present. Plan final cropped size, caption space, text roles, padding, repeated node classes and reserved connector lanes before drawing. Use the Drawer’s profile resolver to implement those choices; do not equate no-overflow with good hierarchy or claim a constraint solver is already supplied.
+
 ## Detect constraints
 
 Read the selected backend's capabilities first. Use `powerpoint_status` then `powerpoint_get_capabilities` for PowerPoint/WPS, or `drawio_live_get_capabilities` for draw.io. When live Mac PowerPoint is requested, also require `powerpoint_officejs_status` to report a connected task pane. Design only with semantic objects the selected adapter can create editably; use declared editable composites when a native monolithic object is unavailable.
