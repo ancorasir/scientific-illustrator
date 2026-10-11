@@ -211,6 +211,223 @@ const tools = [
     },
   },
   {
+  "name": "powerpoint_audit_connections",
+  "description": "Audit actual PPTX connector endpoint references recursively, including nested and cross-group endpoints. File-only; does not use session metadata or open an application. Connection-site coverage is explicit; routing and native behavior need separate review.",
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "source_path"
+    ],
+    "properties": {
+      "source_path": {
+        "type": "string"
+      },
+      "slide_indices": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "include_objects": {
+        "type": "boolean",
+        "default": false
+      }
+    },
+    "additionalProperties": false
+  }
+} ,
+  {
+  "name": "powerpoint_plan_local_patch",
+  "description": "Read-only plan for explicit object text/geometry changes in a current PPTX. Returns source/object SHA preconditions and normalized edits. Preserves paragraph/break structure and run properties; grouped geometry is parent-local points. Does not redesign or reroute.",
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "source_path",
+      "edits"
+    ],
+    "properties": {
+      "source_path": {
+        "type": "string"
+      },
+      "edits": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 1000,
+        "items": {
+          "type": "object",
+          "required": [
+            "slide_index"
+          ],
+          "properties": {
+            "slide_index": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "shape_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "shape_name": {
+              "type": "string"
+            },
+            "expected_shape_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 50000
+            },
+            "coordinate_space": {
+              "type": "string",
+              "enum": [
+                "local"
+              ]
+            },
+            "left": {
+              "type": "number"
+            },
+            "top": {
+              "type": "number"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "shape_id"
+              ],
+              "not": {
+                "required": [
+                  "shape_name"
+                ]
+              }
+            },
+            {
+              "required": [
+                "shape_name"
+              ],
+              "not": {
+                "required": [
+                  "shape_id"
+                ]
+              }
+            }
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "additionalProperties": false
+  }
+} ,
+  {
+  "name": "powerpoint_apply_local_patch",
+  "description": "Apply a version-checked local patch to a new PPTX path without saving through a renderer. Rejects stale source/object hashes and existing outputs. Unchanged package payloads and unselected object XML are verified; native review is still required. Legacy update_shape does not inherit this guarantee.",
+  "inputSchema": {
+    "type": "object",
+    "required": [
+      "source_path",
+      "output_path",
+      "expected_source_sha256",
+      "edits"
+    ],
+    "properties": {
+      "source_path": {
+        "type": "string"
+      },
+      "output_path": {
+        "type": "string"
+      },
+      "expected_source_sha256": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "edits": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 1000,
+        "items": {
+          "type": "object",
+          "required": [
+            "slide_index"
+          ],
+          "properties": {
+            "slide_index": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "shape_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "shape_name": {
+              "type": "string"
+            },
+            "expected_shape_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 50000
+            },
+            "coordinate_space": {
+              "type": "string",
+              "enum": [
+                "local"
+              ]
+            },
+            "left": {
+              "type": "number"
+            },
+            "top": {
+              "type": "number"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "shape_id"
+              ],
+              "not": {
+                "required": [
+                  "shape_name"
+                ]
+              }
+            },
+            {
+              "required": [
+                "shape_name"
+              ],
+              "not": {
+                "required": [
+                  "shape_id"
+                ]
+              }
+            }
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "additionalProperties": false
+  }
+} ,
+  {
     name: "powerpoint_audit_figure",
     description: "Run a deterministic geometry, connector, text-fit, repeated-layout, and raster editability audit on one slide. Returns named hard failures and correction-oriented findings; it does not modify the presentation.",
     inputSchema: {
@@ -1202,6 +1419,12 @@ async function handleTool(name, args = {}) {
     }
     return { value: await runBridge("refresh", args) };
   }
+  const packageActions = {
+    powerpoint_audit_connections: "audit_connections",
+    powerpoint_plan_local_patch: "plan_local_patch",
+    powerpoint_apply_local_patch: "apply_local_patch",
+  };
+  if (packageActions[name]) return { value: await runOoxmlBridge(packageActions[name], args) };
   const actionMap = {
     powerpoint_status: "status",
     powerpoint_get_capabilities: "capabilities",

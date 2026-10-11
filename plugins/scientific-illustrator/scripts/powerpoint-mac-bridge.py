@@ -1869,11 +1869,36 @@ def _is_route_obstacle(shape, slide_area: float) -> bool:
     return (shape.width * shape.height) / slide_area < 0.18
 
 
+def _package_tools():
+    # Explicit sibling path: do not import a similarly named module from cwd.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("scientific_pptx_package", Path(__file__).with_name("pptx-package.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def action_audit_connections(args):
+    return _package_tools().audit_connections(args["source_path"], args.get("slide_indices"), args.get("include_objects", False))
+
+
+def action_plan_local_patch(args):
+    return _package_tools().plan_local_patch(args["source_path"], args["edits"])
+
+
+def action_apply_local_patch(args):
+    return _package_tools().apply_local_patch(args["source_path"], args["output_path"], args["expected_source_sha256"], args["edits"])
+
+
 def action_audit_figure(args: dict) -> dict:
     state, path, prs = _load(False)
     index = int(args["slide_index"])
     slide = _slide(prs, index)
-    findings = []
+    connections = _package_tools().audit_connections(str(path), [index])
+    findings = [{"severity":"hard", "category":"native_connection_reference", "detail":item}
+                for item in connections["slides"][0]["errors"]]
+    findings.extend({"severity":"warning", "category":"native_connection_coverage", "detail":item}
+                    for item in connections["slides"][0]["warnings"])
     max_findings = int(args.get("max_findings", 300))
     alignment_tolerance = float(args.get("alignment_tolerance", 0.75))
     endpoint_clearance = float(args.get("endpoint_clearance", 1.5))
@@ -1950,26 +1975,29 @@ def action_audit_figure(args: dict) -> dict:
                         findings.append({"severity": "hard", "category": "arrowhead_intrusion", "shape_name": shape.name, "message": f"{label} arrowhead lies inside '{obstacle.name}'."})
                     break
 
+    valid_native_ids = {int(edge["id"]) for edge in connections["slides"][0]["connectors"] if edge["valid"]}
     for shape_id, connector_info in metadata.get("connectors", {}).items():
+        if int(shape_id) not in valid_native_ids:
+            continue
         if int(connector_info.get("slide_index", 0)) != index or int(shape_id) not in shapes_by_id:
             continue
         connector = shapes_by_id[int(shape_id)]
-        source = shapes_by_id.get(int(connector_info.get("source_id", 0)))
-        target = shapes_by_id.get(int(connector_info.get("target_id", 0)))
+        # Native OOXML is authoritative; session metadata can be stale after user edits.
         properties = connector._element.nvCxnSpPr.cNvCxnSpPr
         start_binding = properties.find("a:stCxn", properties.nsmap)
         end_binding = properties.find("a:endCxn", properties.nsmap)
-        binding_valid = (
-            source is not None and target is not None and start_binding is not None and end_binding is not None
-            and start_binding.get("id") == str(source.shape_id) and end_binding.get("id") == str(target.shape_id)
-            and start_binding.get("idx") == str(int(connector_info["source_site"]) - 1)
-            and end_binding.get("idx") == str(int(connector_info["target_site"]) - 1)
-        )
-        if not binding_valid and len(findings) < max_findings:
-            findings.append({"severity": "hard", "category": "connector_detached", "shape_name": connector.name, "message": "Connector source/target connection-site binding is missing or stale."})
+        if start_binding is None or end_binding is None:
+            continue
+        source = shapes_by_id.get(int(start_binding.get("id", "0")))
+        target = shapes_by_id.get(int(end_binding.get("id", "0")))
+        # This old route heuristic is only valid for top-level geometry.
+        # Nested binding coverage is provided by connections, not guessed routes.
         if source is None or target is None or connector_info.get("connector_type") != "straight":
             continue
-        segment = (*_site_point(source, int(connector_info["source_site"])), *_site_point(target, int(connector_info["target_site"])))
+        source_site, target_site = int(start_binding.get("idx", "-1"))+1, int(end_binding.get("idx", "-1"))+1
+        if not 1 <= source_site <= 4 or not 1 <= target_site <= 4:
+            continue
+        segment = (*_site_point(source, source_site), *_site_point(target, target_site))
         endpoint_names = {source.name.lower(), target.name.lower()}
         straight_segments.append({"shape": connector, "segment": segment, "endpoints": endpoint_names})
         for obstacle in obstacles:
@@ -1997,6 +2025,7 @@ def action_audit_figure(args: dict) -> dict:
         "backend": "python-pptx-ooxml+application-reload",
         "host_application": state.get("host_application", "auto"),
         "shape_count": len(slide.shapes),
+        "connections": connections,
         "findings": findings,
         "hard_failure_count": hard_count,
         "warning_count": len(findings) - hard_count,
@@ -2196,6 +2225,9 @@ ACTIONS = {
     "new_presentation": action_new_presentation,
     "inspect": action_inspect,
     "audit_figure": action_audit_figure,
+    "audit_connections": action_audit_connections,
+    "plan_local_patch": action_plan_local_patch,
+    "apply_local_patch": action_apply_local_patch,
     "activate_slide": action_activate_slide,
     "refresh": action_refresh,
     "add_slide": action_add_slide,
